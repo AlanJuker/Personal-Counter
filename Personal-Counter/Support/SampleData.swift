@@ -16,29 +16,52 @@ enum SampleData {
         ProcessInfo.processInfo.arguments.contains(launchArgument)
     }
 
-    /// Inserts a week of "Pull ups" counters ending today.
-    @discardableResult
-    static func populate(_ context: ModelContext, name: String = "Pull ups", days: Int = 9) -> [Counter] {
-        let calendar = Calendar.current
-        var created: [Counter] = []
+    /// Inserts two categories and a run of daily counters ending today.
+    static func populate(_ context: ModelContext) {
+        let pullUps = CounterCategory(
+            name: "Pull ups",
+            color: .emerald,
+            symbolName: "figure.strengthtraining.traditional",
+            sortIndex: 0
+        )
+        let cindy = CounterCategory(
+            name: "Cindy Routines",
+            color: .ocean,
+            symbolName: "figure.cooldown",
+            sortIndex: 1
+        )
+        context.insert(pullUps)
+        context.insert(cindy)
 
-        for offset in stride(from: days - 1, through: 0, by: -1) {
+        let calendar = Calendar.current
+
+        for offset in stride(from: 8, through: 0, by: -1) {
             guard let date = calendar.date(byAdding: .day, value: -offset, to: .now) else { continue }
-            let counter = Counter(
-                title: "\(name) \(DateLabelFormat.dayMonth.string(from: date))",
-                name: name,
-                count: 58 + (days - 1 - offset),
-                step: 1,
-                goal: 0,
-                color: offset < 3 ? .ocean : .emerald,
+            context.insert(Counter(
+                title: "\(pullUps.name) \(DateLabelFormat.dayMonth.string(from: date))",
+                name: pullUps.name,
+                count: 58 + (8 - offset),
+                color: pullUps.color,
                 isLocked: offset > 0,
                 createdAt: date,
-                sortIndex: days - offset
-            )
-            context.insert(counter)
-            created.append(counter)
+                sortIndex: 8 - offset,
+                category: pullUps
+            ))
         }
 
-        return created
+        for offset in stride(from: 3, through: 0, by: -1) {
+            guard let date = calendar.date(byAdding: .day, value: -offset, to: .now) else { continue }
+            context.insert(Counter(
+                title: "\(cindy.name) \(DateLabelFormat.dayMonth.string(from: date))",
+                name: cindy.name,
+                count: 12 + offset,
+                goal: 20,
+                color: cindy.color,
+                isLocked: offset > 0,
+                createdAt: date,
+                sortIndex: 20 + (3 - offset),
+                category: cindy
+            ))
+        }
     }
 }

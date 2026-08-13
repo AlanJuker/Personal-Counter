@@ -11,6 +11,7 @@ struct CounterRow: View {
     @Bindable var counter: Counter
     let style: RowStyle
     let showLockBadge: Bool
+    let showCategoryBadge: Bool
     let isExpanded: Bool
 
     var onTap: () -> Void
@@ -54,6 +55,12 @@ struct CounterRow: View {
                         Image(systemName: counter.isLocked ? "lock.fill" : "lock.open")
                             .font(.subheadline.weight(.semibold))
                             .opacity(counter.isLocked ? 1 : 0.45)
+                    }
+                    if showCategoryBadge, let category = counter.category {
+                        Image(systemName: category.symbolName)
+                            .font(.subheadline.weight(.semibold))
+                            .opacity(0.8)
+                            .accessibilityLabel(category.name)
                     }
                     Text(counter.title)
                         .font(.title3.weight(.semibold))
@@ -104,6 +111,9 @@ struct CounterRow: View {
             }
 
             VStack(alignment: .leading, spacing: 4) {
+                if let category = counter.category {
+                    detailLine("Category", category.name)
+                }
                 detailLine("Step", "\(counter.step)")
                 if counter.goal > 0 {
                     detailLine("Goal", "\(counter.count) / \(counter.goal)")

@@ -14,6 +14,7 @@ struct SettingsView: View {
     @EnvironmentObject private var settings: AppSettings
 
     @Query private var counters: [Counter]
+    @Query private var categories: [CounterCategory]
 
     @State private var confirmingResetAll = false
     @State private var confirmingDeleteAll = false
@@ -22,6 +23,7 @@ struct SettingsView: View {
     var body: some View {
         NavigationStack {
             Form {
+                categoriesSection
                 newCounterSection
                 labelSection
                 interactionSection
@@ -54,6 +56,29 @@ struct SettingsView: View {
     }
 
     // MARK: - Sections
+
+    private var categoriesSection: some View {
+        Section {
+            NavigationLink {
+                CategoryManagerView()
+            } label: {
+                HStack {
+                    Label("Categories", systemImage: "square.grid.2x2")
+                    Spacer()
+                    Text("\(categories.count)")
+                        .foregroundStyle(.secondary)
+                }
+            }
+            Toggle("Show category filter", isOn: $settings.showCategoryFilter)
+            Toggle("Name new counters after the category", isOn: $settings.useCategoryNameInLabel)
+            Toggle("Use the category's color", isOn: $settings.useCategoryColor)
+            Toggle("Show category symbol on cards", isOn: $settings.showCategoryBadge)
+        } header: {
+            Text("Categories")
+        } footer: {
+            Text("With a category selected, “+” creates a counter inside it.")
+        }
+    }
 
     private var newCounterSection: some View {
         Section {

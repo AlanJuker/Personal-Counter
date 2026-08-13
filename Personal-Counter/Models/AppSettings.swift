@@ -134,6 +134,10 @@ final class AppSettings: ObservableObject {
         static let appearance = "appearance"
         static let showLockBadge = "showLockBadge"
         static let startExpanded = "startExpanded"
+        static let showCategoryFilter = "showCategoryFilter"
+        static let useCategoryNameInLabel = "useCategoryNameInLabel"
+        static let useCategoryColor = "useCategoryColor"
+        static let showCategoryBadge = "showCategoryBadge"
     }
 
     private let defaults: UserDefaults
@@ -174,6 +178,16 @@ final class AppSettings: ObservableObject {
     @Published var appearance: AppearanceMode { didSet { defaults.set(appearance.rawValue, forKey: Key.appearance) } }
     @Published var showLockBadge: Bool { didSet { defaults.set(showLockBadge, forKey: Key.showLockBadge) } }
     @Published var startExpanded: Bool { didSet { defaults.set(startExpanded, forKey: Key.startExpanded) } }
+
+    // MARK: - Categories
+
+    @Published var showCategoryFilter: Bool { didSet { defaults.set(showCategoryFilter, forKey: Key.showCategoryFilter) } }
+    /// When a category is selected, a new counter is named after it instead of
+    /// after `defaultCounterName` — "Pull ups 13/08/2026".
+    @Published var useCategoryNameInLabel: Bool { didSet { defaults.set(useCategoryNameInLabel, forKey: Key.useCategoryNameInLabel) } }
+    /// New counters inherit their category's color instead of the palette cycle.
+    @Published var useCategoryColor: Bool { didSet { defaults.set(useCategoryColor, forKey: Key.useCategoryColor) } }
+    @Published var showCategoryBadge: Bool { didSet { defaults.set(showCategoryBadge, forKey: Key.showCategoryBadge) } }
 
     /// Remembers the last color handed out so `.cycle` keeps walking the palette.
     var lastAssignedColor: CounterColor {
@@ -217,13 +231,20 @@ final class AppSettings: ObservableObject {
         appearance = AppearanceMode(rawValue: string(Key.appearance, "")) ?? .dark
         showLockBadge = bool(Key.showLockBadge, true)
         startExpanded = bool(Key.startExpanded, false)
+
+        showCategoryFilter = bool(Key.showCategoryFilter, true)
+        useCategoryNameInLabel = bool(Key.useCategoryNameInLabel, true)
+        useCategoryColor = bool(Key.useCategoryColor, true)
+        showCategoryBadge = bool(Key.showCategoryBadge, true)
     }
 
     // MARK: - Derived helpers
 
     /// The label a counter created right now would get, e.g. "Pull ups 13/08/2026".
-    func makeLabel(for date: Date = .now) -> String {
-        let name = defaultCounterName.trimmingCharacters(in: .whitespacesAndNewlines)
+    /// A selected category's name takes the place of `defaultCounterName`.
+    func makeLabel(for date: Date = .now, categoryName: String? = nil) -> String {
+        let source = (useCategoryNameInLabel ? categoryName : nil) ?? defaultCounterName
+        let name = source.trimmingCharacters(in: .whitespacesAndNewlines)
         let datePart = dateLabelFormat.string(from: date)
         guard includeNameInLabel, !name.isEmpty else {
             return datePart.isEmpty ? name : datePart
@@ -274,5 +295,9 @@ final class AppSettings: ObservableObject {
         appearance = .dark
         showLockBadge = true
         startExpanded = false
+        showCategoryFilter = true
+        useCategoryNameInLabel = true
+        useCategoryColor = true
+        showCategoryBadge = true
     }
 }

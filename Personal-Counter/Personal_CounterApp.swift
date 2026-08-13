@@ -17,7 +17,7 @@ struct Personal_CounterApp: App {
         let inMemory = SampleData.isRequested
         do {
             container = try ModelContainer(
-                for: Counter.self,
+                for: Counter.self, CounterCategory.self,
                 configurations: ModelConfiguration(isStoredInMemoryOnly: inMemory)
             )
         } catch {

@@ -15,11 +15,16 @@ struct CounterEditorView: View {
     }
 
     let mode: Mode
+    /// Pre-selected category when creating from a filtered list.
+    var initialCategory: CounterCategory?
 
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var modelContext
     @EnvironmentObject private var settings: AppSettings
 
+    @Query(sort: \CounterCategory.sortIndex) private var categories: [CounterCategory]
+
+    @State private var category: CounterCategory?
     @State private var title = ""
     @State private var count = 0
     @State private var step = 1
@@ -38,9 +43,25 @@ struct CounterEditorView: View {
                         .textInputAutocapitalization(.sentences)
                     if case .create = mode {
                         Button("Use today's date") {
-                            title = settings.makeLabel()
+                            title = settings.makeLabel(categoryName: category?.name)
                         }
                         .font(.footnote)
+                    }
+                }
+
+                Section("Category") {
+                    Picker("Category", selection: $category) {
+                        Text("None").tag(CounterCategory?.none)
+                        ForEach(categories) { option in
+                            Label(option.name, systemImage: option.symbolName)
+                                .tag(CounterCategory?.some(option))
+                        }
+                    }
+                    .disabled(categories.isEmpty)
+                    if categories.isEmpty {
+                        Text("Create categories in Settings → Categories.")
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
                     }
                 }
 
@@ -87,13 +108,15 @@ struct CounterEditorView: View {
 
         switch mode {
         case .create:
-            title = settings.makeLabel()
+            category = initialCategory
+            title = settings.makeLabel(categoryName: initialCategory?.name)
             step = settings.defaultStep
             goal = settings.defaultGoal
-            color = settings.fixedColor
+            color = initialCategory.map { settings.useCategoryColor ? $0.color : settings.fixedColor } ?? settings.fixedColor
             isLocked = settings.lockNewCounters
             allowsNegative = settings.allowNegativeByDefault
         case .edit(let counter):
+            category = counter.category
             title = counter.title
             count = counter.count
             step = counter.step
@@ -112,7 +135,7 @@ struct CounterEditorView: View {
         case .create:
             let counter = Counter(
                 title: trimmed,
-                name: settings.defaultCounterName,
+                name: category?.name ?? settings.defaultCounterName,
                 count: count,
                 step: step,
                 goal: goal,
@@ -120,7 +143,8 @@ struct CounterEditorView: View {
                 isLocked: isLocked,
                 allowsNegative: allowsNegative,
                 notes: notes,
-                sortIndex: Int(Date.now.timeIntervalSince1970)
+                sortIndex: Int(Date.now.timeIntervalSince1970),
+                category: category
             )
             modelContext.insert(counter)
         case .edit(let counter):
@@ -132,6 +156,7 @@ struct CounterEditorView: View {
             counter.isLocked = isLocked
             counter.allowsNegative = allowsNegative
             counter.notes = notes
+            counter.category = category
             counter.updatedAt = .now
         }
 

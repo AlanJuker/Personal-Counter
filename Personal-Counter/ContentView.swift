@@ -12,8 +12,11 @@ struct ContentView: View {
     @Environment(\.modelContext) private var modelContext
     @EnvironmentObject private var settings: AppSettings
     @Query private var counters: [Counter]
+    @Query(sort: \CounterCategory.sortIndex) private var categories: [CounterCategory]
 
     @State private var scope: CounterScope = .all
+    @State private var categoryFilter: CategoryFilter = .all
+    @State private var showingCategories = false
     @State private var editMode: EditMode = .inactive
     /// IDs whose expansion differs from `settings.startExpanded`.
     @State private var toggledIDs: Set<PersistentIdentifier> = []
@@ -27,16 +30,30 @@ struct ContentView: View {
         CounterOrdering.arrange(
             counters,
             scope: scope,
+            categoryFilter: categoryFilter,
             todayBasis: settings.todayBasis,
             field: settings.sortField,
             ascending: settings.sortAscending
         )
     }
 
+    /// The category new counters land in, when one is selected in the chip row.
+    private var selectedCategory: CounterCategory? {
+        guard case .category(let id) = categoryFilter else { return nil }
+        return categories.first { $0.persistentModelID == id }
+    }
+
+    private var newCounterLabel: String {
+        settings.makeLabel(categoryName: selectedCategory?.name)
+    }
+
     var body: some View {
         VStack(spacing: 12) {
             header
             scopePicker
+            if settings.showCategoryFilter {
+                categoryChips
+            }
             list
             if settings.showSummaryBar {
                 SummaryBar(
@@ -53,7 +70,10 @@ struct ContentView: View {
             SettingsView().environmentObject(settings)
         }
         .sheet(isPresented: $creatingCounter) {
-            CounterEditorView(mode: .create).environmentObject(settings)
+            CounterEditorView(mode: .create, initialCategory: selectedCategory).environmentObject(settings)
+        }
+        .sheet(isPresented: $showingCategories) {
+            NavigationStack { CategoryManagerView() }
         }
         .sheet(item: $editingCounter) { counter in
             CounterEditorView(mode: .edit(counter)).environmentObject(settings)
@@ -136,6 +156,72 @@ struct ContentView: View {
 
     private var controlBackground: some ShapeStyle { Color.primary.opacity(0.12) }
 
+    private var categoryChips: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 8) {
+                chip(
+                    title: "All",
+                    symbol: nil,
+                    color: .slate,
+                    isSelected: categoryFilter == .all
+                ) { categoryFilter = .all }
+
+                ForEach(categories) { category in
+                    chip(
+                        title: category.name,
+                        symbol: category.symbolName,
+                        color: category.color,
+                        isSelected: categoryFilter == .category(category.persistentModelID)
+                    ) { categoryFilter = .category(category.persistentModelID) }
+                }
+
+                if counters.contains(where: { $0.category == nil }), !categories.isEmpty {
+                    chip(
+                        title: "Uncategorized",
+                        symbol: "tray",
+                        color: .slate,
+                        isSelected: categoryFilter == .uncategorized
+                    ) { categoryFilter = .uncategorized }
+                }
+
+                chip(title: categories.isEmpty ? "New category" : "Manage", symbol: "slider.horizontal.3", color: .slate, isSelected: false) {
+                    showingCategories = true
+                }
+            }
+            .padding(.horizontal, 12)
+        }
+        .scrollClipDisabled()
+        .animation(.snappy, value: categories.count)
+    }
+
+    private func chip(
+        title: String,
+        symbol: String?,
+        color: CounterColor,
+        isSelected: Bool,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button {
+            withAnimation(.snappy) { action() }
+        } label: {
+            HStack(spacing: 6) {
+                if let symbol {
+                    Image(systemName: symbol).font(.footnote.weight(.semibold))
+                }
+                Text(title).font(.subheadline.weight(.medium))
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 8)
+            .foregroundStyle(isSelected ? color.foreground : .primary)
+            .background(
+                isSelected ? AnyShapeStyle(color.color) : AnyShapeStyle(Color.primary.opacity(0.12)),
+                in: Capsule()
+            )
+        }
+        .buttonStyle(.plain)
+        .accessibilityAddTraits(isSelected ? [.isSelected] : [])
+    }
+
     private var scopePicker: some View {
         Picker("Scope", selection: $scope) {
             ForEach(CounterScope.allCases) { option in
@@ -155,6 +241,7 @@ struct ContentView: View {
                     counter: counter,
                     style: settings.rowStyle,
                     showLockBadge: settings.showLockBadge,
+                    showCategoryBadge: settings.showCategoryBadge,
                     isExpanded: isExpanded(counter),
                     onTap: { handleTap(counter) },
                     onLongPress: { handleLongPress(counter) },
@@ -216,7 +303,7 @@ struct ContentView: View {
         } description: {
             Text(scope == .today
                  ? "Counters you start today show up here."
-                 : "Tap + to create “\(settings.makeLabel())”.")
+                 : "Tap + to create “\(newCounterLabel)”.")
         } actions: {
             Button("New counter", action: addCounter)
                 .buttonStyle(.borderedProminent)
@@ -247,15 +334,17 @@ struct ContentView: View {
             creatingCounter = true
             return
         }
+        let category = selectedCategory
         let counter = Counter(
-            title: settings.makeLabel(),
-            name: settings.defaultCounterName,
+            title: newCounterLabel,
+            name: category?.name ?? settings.defaultCounterName,
             step: settings.defaultStep,
             goal: settings.defaultGoal,
-            color: settings.nextColor(),
+            color: colorForNewCounter(in: category),
             isLocked: settings.lockNewCounters,
             allowsNegative: settings.allowNegativeByDefault,
-            sortIndex: nextSortIndex()
+            sortIndex: nextSortIndex(),
+            category: category
         )
         withAnimation(.snappy) {
             modelContext.insert(counter)
@@ -265,6 +354,13 @@ struct ContentView: View {
 
     private func nextSortIndex() -> Int {
         (counters.map(\.sortIndex).max() ?? 0) + 1
+    }
+
+    private func colorForNewCounter(in category: CounterCategory?) -> CounterColor {
+        if settings.useCategoryColor, let category {
+            return category.color
+        }
+        return settings.nextColor()
     }
 
     private func handleTap(_ counter: Counter) {

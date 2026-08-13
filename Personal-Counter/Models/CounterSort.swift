@@ -6,6 +6,25 @@
 //
 
 import Foundation
+import SwiftData
+
+/// Which category the list is currently narrowed to.
+enum CategoryFilter: Hashable {
+    case all
+    case uncategorized
+    case category(PersistentIdentifier)
+
+    func matches(_ counter: Counter) -> Bool {
+        switch self {
+        case .all:
+            return true
+        case .uncategorized:
+            return counter.category == nil
+        case .category(let id):
+            return counter.category?.persistentModelID == id
+        }
+    }
+}
 
 enum CounterSortField: String, CaseIterable, Identifiable, Codable {
     case manual
@@ -71,18 +90,17 @@ enum CounterOrdering {
     static func arrange(
         _ counters: [Counter],
         scope: CounterScope,
+        categoryFilter: CategoryFilter = .all,
         todayBasis: TodayBasis,
         field: CounterSortField,
         ascending: Bool,
         calendar: Calendar = .current,
         now: Date = .now
     ) -> [Counter] {
-        let scoped: [Counter]
-        switch scope {
-        case .all:
-            scoped = counters
-        case .today:
-            scoped = counters.filter { counter in
+        var scoped = counters.filter { categoryFilter.matches($0) }
+
+        if scope == .today {
+            scoped = scoped.filter { counter in
                 let date = todayBasis == .created ? counter.createdAt : counter.updatedAt
                 return calendar.isDate(date, inSameDayAs: now)
             }

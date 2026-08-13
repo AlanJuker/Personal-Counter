@@ -8,6 +8,9 @@ Built with SwiftUI + SwiftData, targeting iOS 26.5.
 ## Features
 
 - **Tap to count.** Tapping a card adds one step; the number animates.
+- **Categories.** Group counters by activity — "Pull ups", "Cindy Routines" — each with its
+  own color and SF Symbol. Filter the list with the chip row; with a category selected, `+`
+  creates a counter inside it, named and colored after it.
 - **Auto-dated labels.** A new counter is named `<name> <today's date>` using the format you pick.
 - **All / Today.** Filter the list to counters started (or updated) today.
 - **Expandable cards.** Tap the chevron for +/−, reset, lock and edit controls, plus created/updated timestamps.
@@ -21,6 +24,7 @@ Built with SwiftUI + SwiftData, targeting iOS 26.5.
 
 | Group | What you can change |
 | --- | --- |
+| Categories | Manage categories (name, color, symbol, order), show the filter chips, name new counters after the category, use the category's color, show the category symbol on cards |
 | New counters | Default name, include name in label, default step, default goal, start locked, allow negatives, whether `+` opens the editor |
 | Label & color | Date format (`13/08/2026`, `13/08`, `2026-08-13`, localized, none…), color assignment (cycle / random / fixed), the fixed color |
 | Interaction | What a tap does (add / subtract / nothing), long-press to reset, haptics on/off, haptic strength, sound, confirm before reset, confirm before delete |
@@ -35,19 +39,28 @@ Personal-Counter/
 ├─ Personal_CounterApp.swift     # App entry, SwiftData container
 ├─ ContentView.swift             # Main list, header, scope picker, actions
 ├─ Models/
-│  ├─ Counter.swift              # @Model: title, count, step, goal, color, lock…
+│  ├─ Counter.swift              # @Model: title, count, step, goal, color, lock, category
+│  ├─ CounterCategory.swift      # @Model: name, color, symbol, counters
 │  ├─ AppSettings.swift          # Every parameter, persisted in UserDefaults
 │  ├─ CounterColor.swift         # Card palette
 │  ├─ DateLabelFormat.swift      # Date formats for new-counter labels
-│  └─ CounterSort.swift          # Scope + sort ordering
+│  └─ CounterSort.swift          # Scope, category filter + sort ordering
 ├─ Views/
 │  ├─ CounterRow.swift           # The tappable card
 │  ├─ CounterEditorView.swift    # Create / edit sheet
+│  ├─ CategoryManagerView.swift  # Category list + editor
 │  ├─ SettingsView.swift         # Settings form
 │  └─ SummaryBar.swift           # Total / average pill
 └─ Support/
    ├─ Feedback.swift             # Haptics + sound
-   └─ SampleData.swift           # Demo counters for previews / -demoData
+   └─ SampleData.swift           # Demo data for previews / -demoData
+```
+
+The app icon is generated, not hand-drawn — `Design/MakeIcon.swift` renders the light, dark
+and tinted 1024px variants into `Assets.xcassets/AppIcon.appiconset`:
+
+```sh
+swift Design/MakeIcon.swift Personal-Counter/Assets.xcassets/AppIcon.appiconset
 ```
 
 ## Running

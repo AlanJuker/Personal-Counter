@@ -28,6 +28,8 @@ final class Counter {
     var updatedAt: Date = Date.now
     /// Position used by the manual sort order.
     var sortIndex: Int = 0
+    /// Optional group this counter belongs to. Its inverse lives on `CounterCategory`.
+    var category: CounterCategory?
 
     init(
         title: String,
@@ -40,7 +42,8 @@ final class Counter {
         allowsNegative: Bool = false,
         notes: String = "",
         createdAt: Date = .now,
-        sortIndex: Int = 0
+        sortIndex: Int = 0,
+        category: CounterCategory? = nil
     ) {
         self.title = title
         self.name = name
@@ -54,6 +57,7 @@ final class Counter {
         self.createdAt = createdAt
         self.updatedAt = createdAt
         self.sortIndex = sortIndex
+        self.category = category
     }
 
     var color: CounterColor {
